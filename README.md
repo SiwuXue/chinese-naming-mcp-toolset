@@ -56,7 +56,7 @@ npm start
   "mcpServers": {
     "chinese-naming": {
       "command": "node",
-      "args": ["/path/to/index.js"],
+      "args": ["./index.js"],
       "env": {
         "NODE_ENV": "production",
         "MCP_MODE": "true"
