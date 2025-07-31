@@ -1,0 +1,61 @@
+# 代码所有者文件
+# 这个文件定义了谁负责审查代码库中特定部分的变更
+# 更多信息: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# 全局所有者 - 这些用户将被请求审查所有变更
+* @chinese-naming/core-team
+
+# 核心代码
+/src/ @chinese-naming/core-team @chinese-naming/developers
+/index.js @chinese-naming/core-team
+
+# 工具实现
+/src/tools/ @chinese-naming/developers
+/src/tools/advanced/ @chinese-naming/senior-developers
+
+# 数据和配置
+/src/data/ @chinese-naming/data-team
+/config/ @chinese-naming/config-team
+
+# 测试
+/test/ @chinese-naming/qa-team @chinese-naming/developers
+
+# 文档
+*.md @chinese-naming/docs-team
+/docs/ @chinese-naming/docs-team
+
+# 构建和部署
+/scripts/ @chinese-naming/devops-team
+/Dockerfile @chinese-naming/devops-team
+/docker-compose.yml @chinese-naming/devops-team
+/.github/ @chinese-naming/devops-team @chinese-naming/core-team
+
+# 包配置
+/package.json @chinese-naming/core-team
+/package-lock.json @chinese-naming/core-team
+
+# 代码质量配置
+/.eslintrc.js @chinese-naming/core-team
+/.prettierrc.js @chinese-naming/core-team
+/jest.config.js @chinese-naming/qa-team
+
+# 安全相关
+/SECURITY.md @chinese-naming/security-team @chinese-naming/core-team
+/.github/workflows/ @chinese-naming/security-team @chinese-naming/devops-team
+
+# 许可证和法律文档
+/LICENSE @chinese-naming/legal-team @chinese-naming/core-team
+
+# 示例和CLI
+/examples/ @chinese-naming/docs-team @chinese-naming/developers
+/bin/ @chinese-naming/developers
+
+# 特定工具的专家审查
+/src/tools/chinese-name-generator.tool.js @chinese-naming/naming-experts
+/src/tools/name-bazi-analyzer.tool.js @chinese-naming/bazi-experts
+/src/tools/name-phonetic-analyzer.tool.js @chinese-naming/phonetic-experts
+/src/tools/name-cultural-analyzer.tool.js @chinese-naming/cultural-experts
+/src/tools/name-poetry-generator.tool.js @chinese-naming/poetry-experts
+/src/tools/name-fortune-analyzer.tool.js @chinese-naming/fortune-experts
+/src/tools/name-fengshui-analyzer.tool.js @chinese-naming/fengshui-experts
+/src/tools/name-history-analyzer.tool.js @chinese-naming/history-experts

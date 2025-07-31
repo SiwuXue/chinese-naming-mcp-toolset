@@ -1,0 +1,17 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 文档和FAQ
+    url: https://github.com/chinese-naming/mcp-toolset/wiki
+    about: 查看项目文档、常见问题解答和使用指南
+  - name: 💬 讨论区
+    url: https://github.com/chinese-naming/mcp-toolset/discussions
+    about: 提问、分享想法或与社区讨论
+  - name: 🔒 安全漏洞报告
+    url: https://github.com/chinese-naming/mcp-toolset/security/advisories/new
+    about: 私密报告安全漏洞（请勿在公开Issues中报告安全问题）
+  - name: 📧 邮件联系
+    url: mailto:support@chinese-naming.dev
+    about: 通过邮件联系项目维护团队
+  - name: 🌟 项目主页
+    url: https://chinese-naming.dev
+    about: 访问项目官方网站了解更多信息

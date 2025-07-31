@@ -1,0 +1,664 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'README.md'
+      - 'package.json'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'README.md'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      doc_type:
+        description: 'Type of documentation to generate'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'api'
+          - 'jsdoc'
+          - 'coverage'
+          - 'changelog'
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # API 文档生成
+  generate-api-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+    if: github.event.inputs.doc_type == 'all' || github.event.inputs.doc_type == 'api' || github.event.inputs.doc_type == null
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install documentation tools
+        run: |
+          npm install -g @apidevtools/swagger-parser
+          npm install -g redoc-cli
+          npm install -g @redocly/openapi-cli
+
+      - name: Generate API documentation
+        run: |
+          echo "📚 Generating API documentation..."
+          
+          # 创建 docs 目录
+          mkdir -p docs/api
+          
+          # 生成 API 文档
+          echo "# 🚀 Chinese Naming MCP Toolset API Documentation" > docs/api/README.md
+          echo "" >> docs/api/README.md
+          echo "**Generated:** $(date)" >> docs/api/README.md
+          echo "**Version:** $(jq -r '.version' package.json)" >> docs/api/README.md
+          echo "" >> docs/api/README.md
+          
+          echo "## 📋 Available Tools" >> docs/api/README.md
+          echo "" >> docs/api/README.md
+          
+          # 扫描工具文件并生成文档
+          find src/tools -name "*.js" | while read tool_file; do
+            TOOL_NAME=$(basename "$tool_file" .js)
+            echo "### $TOOL_NAME" >> docs/api/README.md
+            echo "" >> docs/api/README.md
+            
+            # 提取工具描述（从注释中）
+            if grep -q "@description" "$tool_file"; then
+              DESCRIPTION=$(grep "@description" "$tool_file" | sed 's/.*@description //' | sed 's/\*\///')
+              echo "**Description:** $DESCRIPTION" >> docs/api/README.md
+            fi
+            
+            echo "" >> docs/api/README.md
+            echo "**File:** \`$tool_file\`" >> docs/api/README.md
+            echo "" >> docs/api/README.md
+            
+            # 提取参数信息
+            if grep -q "getParameterSchema" "$tool_file"; then
+              echo "**Parameters:** See source code for detailed schema" >> docs/api/README.md
+            fi
+            
+            echo "" >> docs/api/README.md
+            echo "---" >> docs/api/README.md
+            echo "" >> docs/api/README.md
+          done
+          
+          echo "## 🔧 Usage Examples" >> docs/api/README.md
+          echo "" >> docs/api/README.md
+          echo "\`\`\`javascript" >> docs/api/README.md
+          echo "// Example usage of Chinese Name Generator" >> docs/api/README.md
+          echo "const generator = new ChineseNameGenerator();" >> docs/api/README.md
+          echo "const result = await generator.execute({" >> docs/api/README.md
+          echo "  gender: 'male'," >> docs/api/README.md
+          echo "  style: 'traditional'," >> docs/api/README.md
+          echo "  count: 5" >> docs/api/README.md
+          echo "});" >> docs/api/README.md
+          echo "\`\`\`" >> docs/api/README.md
+
+      - name: Generate tool-specific documentation
+        run: |
+          echo "📝 Generating tool-specific documentation..."
+          
+          # 为每个工具生成详细文档
+          find src/tools -name "*.js" | while read tool_file; do
+            TOOL_NAME=$(basename "$tool_file" .js)
+            DOC_FILE="docs/api/${TOOL_NAME}.md"
+            
+            echo "# $TOOL_NAME" > "$DOC_FILE"
+            echo "" >> "$DOC_FILE"
+            
+            # 提取类注释
+            if grep -A 10 "class $TOOL_NAME" "$tool_file" | grep -q "\*"; then
+              echo "## Description" >> "$DOC_FILE"
+              echo "" >> "$DOC_FILE"
+              grep -A 10 "class $TOOL_NAME" "$tool_file" | grep "\*" | sed 's/.*\* //' | sed 's/\*\///' >> "$DOC_FILE"
+              echo "" >> "$DOC_FILE"
+            fi
+            
+            echo "## Methods" >> "$DOC_FILE"
+            echo "" >> "$DOC_FILE"
+            
+            # 提取方法信息
+            grep -n "async execute\|getParameterSchema\|getUsageExamples" "$tool_file" | while read method_line; do
+              METHOD_NAME=$(echo "$method_line" | sed 's/.*\(execute\|getParameterSchema\|getUsageExamples\).*/\1/')
+              echo "### $METHOD_NAME()" >> "$DOC_FILE"
+              echo "" >> "$DOC_FILE"
+              
+              # 添加方法描述
+              case "$METHOD_NAME" in
+                "execute")
+                  echo "Executes the tool with provided parameters." >> "$DOC_FILE"
+                  ;;
+                "getParameterSchema")
+                  echo "Returns the JSON schema for tool parameters." >> "$DOC_FILE"
+                  ;;
+                "getUsageExamples")
+                  echo "Returns usage examples for the tool." >> "$DOC_FILE"
+                  ;;
+              esac
+              
+              echo "" >> "$DOC_FILE"
+            done
+            
+            echo "## Source Code" >> "$DOC_FILE"
+            echo "" >> "$DOC_FILE"
+            echo "Location: \`$tool_file\`" >> "$DOC_FILE"
+            echo "" >> "$DOC_FILE"
+          done
+
+      - name: Upload API documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-docs
+          path: docs/api/
+
+  # JSDoc 文档生成
+  generate-jsdoc:
+    name: Generate JSDoc Documentation
+    runs-on: ubuntu-latest
+    if: github.event.inputs.doc_type == 'all' || github.event.inputs.doc_type == 'jsdoc' || github.event.inputs.doc_type == null
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install JSDoc
+        run: npm install -g jsdoc
+
+      - name: Generate JSDoc
+        run: |
+          echo "📖 Generating JSDoc documentation..."
+          
+          # 创建 JSDoc 配置
+          cat > jsdoc.conf.json << EOF
+          {
+            "source": {
+              "include": ["./src/"],
+              "includePattern": "\\.(js|ts)$",
+              "exclude": ["node_modules/", "test/"]
+            },
+            "opts": {
+              "destination": "./docs/jsdoc/",
+              "recurse": true,
+              "readme": "./README.md"
+            },
+            "plugins": ["plugins/markdown"],
+            "templates": {
+              "cleverLinks": false,
+              "monospaceLinks": false
+            }
+          }
+          EOF
+          
+          # 生成 JSDoc
+          jsdoc -c jsdoc.conf.json || echo "JSDoc generation completed with warnings"
+
+      - name: Upload JSDoc
+        uses: actions/upload-artifact@v3
+        with:
+          name: jsdoc
+          path: docs/jsdoc/
+        if: always()
+
+  # 测试覆盖率文档
+  generate-coverage-docs:
+    name: Generate Coverage Documentation
+    runs-on: ubuntu-latest
+    if: github.event.inputs.doc_type == 'all' || github.event.inputs.doc_type == 'coverage' || github.event.inputs.doc_type == null
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate test coverage
+        run: |
+          echo "📊 Generating test coverage documentation..."
+          npm run test:coverage || npm test -- --coverage || echo "Coverage generation failed"
+
+      - name: Generate coverage summary
+        run: |
+          mkdir -p docs/coverage
+          
+          echo "# 📊 Test Coverage Report" > docs/coverage/README.md
+          echo "" >> docs/coverage/README.md
+          echo "**Generated:** $(date)" >> docs/coverage/README.md
+          echo "" >> docs/coverage/README.md
+          
+          if [ -f "coverage/coverage-summary.json" ]; then
+            LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+            FUNCTIONS=$(jq '.total.functions.pct' coverage/coverage-summary.json)
+            BRANCHES=$(jq '.total.branches.pct' coverage/coverage-summary.json)
+            STATEMENTS=$(jq '.total.statements.pct' coverage/coverage-summary.json)
+            
+            echo "## 📈 Overall Coverage" >> docs/coverage/README.md
+            echo "" >> docs/coverage/README.md
+            echo "| Metric | Coverage | Status |" >> docs/coverage/README.md
+            echo "|--------|----------|--------|" >> docs/coverage/README.md
+            echo "| Lines | $LINES% | $([ $(echo "$LINES >= 80" | bc -l) -eq 1 ] && echo "✅" || echo "❌") |" >> docs/coverage/README.md
+            echo "| Functions | $FUNCTIONS% | $([ $(echo "$FUNCTIONS >= 80" | bc -l) -eq 1 ] && echo "✅" || echo "❌") |" >> docs/coverage/README.md
+            echo "| Branches | $BRANCHES% | $([ $(echo "$BRANCHES >= 80" | bc -l) -eq 1 ] && echo "✅" || echo "❌") |" >> docs/coverage/README.md
+            echo "| Statements | $STATEMENTS% | $([ $(echo "$STATEMENTS >= 80" | bc -l) -eq 1 ] && echo "✅" || echo "❌") |" >> docs/coverage/README.md
+            echo "" >> docs/coverage/README.md
+            
+            echo "## 📁 File Coverage" >> docs/coverage/README.md
+            echo "" >> docs/coverage/README.md
+            echo "| File | Lines | Functions | Branches |" >> docs/coverage/README.md
+            echo "|------|-------|-----------|----------|" >> docs/coverage/README.md
+            
+            jq -r 'to_entries[] | select(.key != "total") | "| \(.key | split("/") | last) | \(.value.lines.pct)% | \(.value.functions.pct)% | \(.value.branches.pct)% |"' coverage/coverage-summary.json >> docs/coverage/README.md
+          else
+            echo "❌ No coverage data available." >> docs/coverage/README.md
+          fi
+          
+          # 复制 HTML 覆盖率报告
+          if [ -d "coverage/lcov-report" ]; then
+            cp -r coverage/lcov-report docs/coverage/html
+          fi
+
+      - name: Upload coverage documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-docs
+          path: |
+            docs/coverage/
+            coverage/
+        if: always()
+
+  # 变更日志生成
+  generate-changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    if: github.event.inputs.doc_type == 'all' || github.event.inputs.doc_type == 'changelog' || github.event.inputs.doc_type == null
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install changelog tools
+        run: |
+          npm install -g conventional-changelog-cli
+          npm install -g auto-changelog
+
+      - name: Generate changelog
+        run: |
+          echo "📝 Generating changelog..."
+          
+          # 使用 conventional-changelog 生成
+          conventional-changelog -p angular -i CHANGELOG.md -s || echo "Conventional changelog failed"
+          
+          # 备用方案：使用 auto-changelog
+          if [ ! -f "CHANGELOG.md" ] || [ ! -s "CHANGELOG.md" ]; then
+            auto-changelog --output CHANGELOG.md || echo "Auto-changelog failed"
+          fi
+          
+          # 如果都失败了，手动生成基础变更日志
+          if [ ! -f "CHANGELOG.md" ] || [ ! -s "CHANGELOG.md" ]; then
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "## [Unreleased]" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            
+            # 获取最近的提交
+            echo "### Recent Changes" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            git log --oneline -10 --pretty=format:"- %s (%h)" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+          fi
+
+      - name: Generate release notes
+        run: |
+          echo "📋 Generating release notes..."
+          
+          mkdir -p docs/releases
+          
+          # 获取最新标签
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          
+          echo "# Release Notes" > docs/releases/README.md
+          echo "" >> docs/releases/README.md
+          echo "**Latest Release:** $LATEST_TAG" >> docs/releases/README.md
+          echo "" >> docs/releases/README.md
+          
+          # 生成发布说明
+          if [ "$LATEST_TAG" != "v0.0.0" ]; then
+            echo "## $LATEST_TAG" >> docs/releases/README.md
+            echo "" >> docs/releases/README.md
+            
+            # 获取标签之间的提交
+            PREV_TAG=$(git describe --tags --abbrev=0 $LATEST_TAG^ 2>/dev/null || echo "")
+            
+            if [ -n "$PREV_TAG" ]; then
+              echo "### Changes since $PREV_TAG" >> docs/releases/README.md
+              echo "" >> docs/releases/README.md
+              git log --oneline $PREV_TAG..$LATEST_TAG --pretty=format:"- %s" >> docs/releases/README.md
+            else
+              echo "### Initial Release" >> docs/releases/README.md
+              echo "" >> docs/releases/README.md
+              echo "- Initial version of Chinese Naming MCP Toolset" >> docs/releases/README.md
+            fi
+            
+            echo "" >> docs/releases/README.md
+          fi
+          
+          echo "## 🚀 Upcoming Features" >> docs/releases/README.md
+          echo "" >> docs/releases/README.md
+          echo "- Enhanced name analysis algorithms" >> docs/releases/README.md
+          echo "- Additional cultural context features" >> docs/releases/README.md
+          echo "- Performance optimizations" >> docs/releases/README.md
+          echo "- Extended API documentation" >> docs/releases/README.md
+
+      - name: Upload changelog
+        uses: actions/upload-artifact@v3
+        with:
+          name: changelog
+          path: |
+            CHANGELOG.md
+            docs/releases/
+
+  # 文档网站构建
+  build-docs-site:
+    name: Build Documentation Site
+    runs-on: ubuntu-latest
+    needs: [generate-api-docs, generate-jsdoc, generate-coverage-docs, generate-changelog]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all documentation artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Setup documentation structure
+        run: |
+          echo "🏗️ Building documentation site..."
+          
+          # 创建文档网站结构
+          mkdir -p docs-site
+          
+          # 创建主页
+          cat > docs-site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Chinese Naming MCP Toolset - Documentation</title>
+              <style>
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                      line-height: 1.6;
+                      margin: 0;
+                      padding: 20px;
+                      background-color: #f5f5f5;
+                  }
+                  .container {
+                      max-width: 1200px;
+                      margin: 0 auto;
+                      background: white;
+                      padding: 30px;
+                      border-radius: 8px;
+                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                  }
+                  h1 {
+                      color: #2c3e50;
+                      border-bottom: 3px solid #3498db;
+                      padding-bottom: 10px;
+                  }
+                  .nav {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                      gap: 20px;
+                      margin-top: 30px;
+                  }
+                  .nav-item {
+                      background: #ecf0f1;
+                      padding: 20px;
+                      border-radius: 6px;
+                      text-decoration: none;
+                      color: #2c3e50;
+                      transition: transform 0.2s;
+                  }
+                  .nav-item:hover {
+                      transform: translateY(-2px);
+                      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                  }
+                  .nav-item h3 {
+                      margin: 0 0 10px 0;
+                      color: #3498db;
+                  }
+                  .nav-item p {
+                      margin: 0;
+                      font-size: 14px;
+                      color: #7f8c8d;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🚀 Chinese Naming MCP Toolset</h1>
+                  <p>欢迎来到中文起名 MCP 工具集文档中心</p>
+                  
+                  <div class="nav">
+                      <a href="api/" class="nav-item">
+                          <h3>📚 API Documentation</h3>
+                          <p>完整的 API 文档和工具说明</p>
+                      </a>
+                      
+                      <a href="jsdoc/" class="nav-item">
+                          <h3>📖 JSDoc</h3>
+                          <p>自动生成的代码文档</p>
+                      </a>
+                      
+                      <a href="coverage/" class="nav-item">
+                          <h3>📊 Test Coverage</h3>
+                          <p>测试覆盖率报告</p>
+                      </a>
+                      
+                      <a href="releases/" class="nav-item">
+                          <h3>📝 Release Notes</h3>
+                          <p>版本发布说明和变更日志</p>
+                      </a>
+                      
+                      <a href="../README.md" class="nav-item">
+                          <h3>📋 README</h3>
+                          <p>项目介绍和快速开始</p>
+                      </a>
+                      
+                      <a href="../CONTRIBUTING.md" class="nav-item">
+                          <h3>🤝 Contributing</h3>
+                          <p>贡献指南</p>
+                      </a>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Copy documentation files
+        run: |
+          # 复制各种文档
+          [ -d "api-docs" ] && cp -r api-docs docs-site/api
+          [ -d "jsdoc" ] && cp -r jsdoc docs-site/jsdoc
+          [ -d "coverage-docs" ] && cp -r coverage-docs docs-site/coverage
+          [ -d "changelog" ] && cp -r changelog/docs/releases docs-site/releases
+          
+          # 复制变更日志
+          [ -f "changelog/CHANGELOG.md" ] && cp changelog/CHANGELOG.md docs-site/
+          
+          # 创建 404 页面
+          cat > docs-site/404.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Page Not Found</title>
+              <style>
+                  body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                  h1 { color: #e74c3c; }
+              </style>
+          </head>
+          <body>
+              <h1>404 - Page Not Found</h1>
+              <p>The requested page could not be found.</p>
+              <a href="/">Return to Home</a>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload documentation site
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs-site
+          path: docs-site/
+
+  # 部署到 GitHub Pages
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [build-docs-site]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download documentation site
+        uses: actions/download-artifact@v3
+        with:
+          name: docs-site
+          path: docs-site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: docs-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+  # 文档质量检查
+  docs-quality-check:
+    name: Documentation Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install documentation linters
+        run: |
+          npm install -g markdownlint-cli
+          npm install -g alex
+          npm install -g write-good
+
+      - name: Lint Markdown files
+        run: |
+          echo "📝 Linting Markdown files..."
+          markdownlint README.md CONTRIBUTING.md docs/ || echo "Markdown linting completed with issues"
+
+      - name: Check for insensitive language
+        run: |
+          echo "🔍 Checking for insensitive language..."
+          alex README.md CONTRIBUTING.md docs/ || echo "Language check completed"
+
+      - name: Check writing quality
+        run: |
+          echo "✍️ Checking writing quality..."
+          write-good README.md CONTRIBUTING.md || echo "Writing quality check completed"
+
+      - name: Generate documentation quality report
+        run: |
+          echo "# 📝 Documentation Quality Report" > docs-quality-report.md
+          echo "" >> docs-quality-report.md
+          echo "**Check Date:** $(date)" >> docs-quality-report.md
+          echo "" >> docs-quality-report.md
+          
+          echo "## 📊 Quality Metrics" >> docs-quality-report.md
+          echo "" >> docs-quality-report.md
+          
+          # 统计文档文件
+          MD_FILES=$(find . -name "*.md" | wc -l)
+          echo "- **Markdown Files:** $MD_FILES" >> docs-quality-report.md
+          
+          # 统计文档行数
+          if [ "$MD_FILES" -gt 0 ]; then
+            TOTAL_LINES=$(find . -name "*.md" -exec wc -l {} + | tail -1 | awk '{print $1}')
+            echo "- **Total Lines:** $TOTAL_LINES" >> docs-quality-report.md
+          fi
+          
+          echo "" >> docs-quality-report.md
+          echo "## ✅ Checks Performed" >> docs-quality-report.md
+          echo "" >> docs-quality-report.md
+          echo "- [x] Markdown linting" >> docs-quality-report.md
+          echo "- [x] Insensitive language check" >> docs-quality-report.md
+          echo "- [x] Writing quality analysis" >> docs-quality-report.md
+          echo "" >> docs-quality-report.md
+          
+          echo "## 💡 Recommendations" >> docs-quality-report.md
+          echo "" >> docs-quality-report.md
+          echo "- Keep documentation up to date with code changes" >> docs-quality-report.md
+          echo "- Use clear and concise language" >> docs-quality-report.md
+          echo "- Include examples and usage scenarios" >> docs-quality-report.md
+          echo "- Maintain consistent formatting" >> docs-quality-report.md
+
+      - name: Upload quality report
+        uses: actions/upload-artifact@v3
+        with:
+          name: docs-quality-report
+          path: docs-quality-report.md

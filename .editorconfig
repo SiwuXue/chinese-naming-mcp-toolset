@@ -1,0 +1,219 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# 顶级EditorConfig文件
+root = true
+
+# 所有文件
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# JavaScript文件
+[*.{js,jsx,ts,tsx}]
+indent_style = space
+indent_size = 2
+max_line_length = 100
+
+# JSON文件
+[*.json]
+indent_style = space
+indent_size = 2
+
+# YAML文件
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Markdown文件
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 80
+
+# HTML文件
+[*.html]
+indent_style = space
+indent_size = 2
+
+# CSS文件
+[*.{css,scss,sass,less}]
+indent_style = space
+indent_size = 2
+
+# XML文件
+[*.xml]
+indent_style = space
+indent_size = 2
+
+# Shell脚本
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+
+# Batch文件
+[*.{bat,cmd}]
+end_of_line = crlf
+
+# PowerShell文件
+[*.ps1]
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+
+# Python文件
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 88
+
+# Makefile
+[{Makefile,makefile,*.mk}]
+indent_style = tab
+indent_size = 4
+
+# Docker文件
+[{Dockerfile,*.dockerfile}]
+indent_style = space
+indent_size = 2
+
+# 配置文件
+[*.{ini,cfg,conf,config}]
+indent_style = space
+indent_size = 2
+
+# 环境文件
+[.env*]
+indent_style = space
+indent_size = 2
+
+# 忽略文件
+[{.gitignore,.dockerignore,.eslintignore,.prettierignore}]
+indent_style = space
+indent_size = 2
+
+# 许可证文件
+[{LICENSE,LICENCE,COPYRIGHT}]
+trim_trailing_whitespace = false
+
+# 变更日志
+[{CHANGELOG,HISTORY,CHANGES}*]
+trim_trailing_whitespace = false
+
+# README文件
+[README*]
+trim_trailing_whitespace = false
+
+# 包文件
+[package*.json]
+indent_style = space
+indent_size = 2
+
+# 锁文件
+[{package-lock.json,yarn.lock,pnpm-lock.yaml}]
+indent_style = space
+indent_size = 2
+insert_final_newline = false
+
+# TypeScript配置
+[tsconfig*.json]
+indent_style = space
+indent_size = 2
+
+# ESLint配置
+[.eslintrc*]
+indent_style = space
+indent_size = 2
+
+# Prettier配置
+[.prettierrc*]
+indent_style = space
+indent_size = 2
+
+# Jest配置
+[jest.config.*]
+indent_style = space
+indent_size = 2
+
+# Babel配置
+[.babelrc*]
+indent_style = space
+indent_size = 2
+
+# Webpack配置
+[webpack*.js]
+indent_style = space
+indent_size = 2
+
+# Rollup配置
+[rollup*.js]
+indent_style = space
+indent_size = 2
+
+# Vite配置
+[vite*.js]
+indent_style = space
+indent_size = 2
+
+# GitHub Actions
+[.github/**/*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Docker Compose
+[docker-compose*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Kubernetes
+[*.{k8s,kube}.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Helm
+[{Chart.yaml,values*.yaml}]
+indent_style = space
+indent_size = 2
+
+# Terraform
+[*.{tf,tfvars}]
+indent_style = space
+indent_size = 2
+
+# Ansible
+[*.{ansible,playbook}.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# 日志文件
+[*.log]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# 数据文件
+[*.{csv,tsv}]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# 二进制文件
+[*.{png,jpg,jpeg,gif,ico,svg,woff,woff2,ttf,eot}]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# 压缩文件
+[*.{zip,tar,gz,7z,rar}]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# 证书文件
+[*.{pem,crt,key,p12,pfx}]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# 数据库文件
+[*.{db,sqlite,sqlite3}]
+insert_final_newline = false
+trim_trailing_whitespace = false

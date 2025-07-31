@@ -1,0 +1,236 @@
+# 中文起名MCP工具集 Docker Compose 配置
+# Chinese Naming MCP Toolset Docker Compose Configuration
+
+version: '3.8'
+
+services:
+  # 主应用服务
+  chinese-naming-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: chinese-naming-mcp
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      - HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CACHE_ENABLED=${CACHE_ENABLED:-true}
+      - CACHE_TTL=${CACHE_TTL:-3600}
+      - MAX_CONCURRENT_REQUESTS=${MAX_CONCURRENT_REQUESTS:-10}
+    volumes:
+      - ./data:/app/data:ro
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+      - app_cache:/app/.cache
+    networks:
+      - chinese-naming-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - redis
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chinese-naming.rule=Host(`naming.local`)"
+      - "traefik.http.services.chinese-naming.loadbalancer.server.port=3000"
+
+  # Redis 缓存服务
+  redis:
+    image: redis:7-alpine
+    container_name: chinese-naming-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+      - ./config/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - chinese-naming-network
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    sysctls:
+      - net.core.somaxconn=1024
+
+  # Nginx 反向代理（可选）
+  nginx:
+    image: nginx:alpine
+    container_name: chinese-naming-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - chinese-naming-network
+    depends_on:
+      - chinese-naming-app
+    profiles:
+      - with-nginx
+
+  # 监控服务 - Prometheus（可选）
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: chinese-naming-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - chinese-naming-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    profiles:
+      - monitoring
+
+  # 监控服务 - Grafana（可选）
+  grafana:
+    image: grafana/grafana:latest
+    container_name: chinese-naming-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - chinese-naming-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+  # 日志收集服务 - Fluentd（可选）
+  fluentd:
+    build:
+      context: ./config/fluentd
+      dockerfile: Dockerfile
+    container_name: chinese-naming-fluentd
+    restart: unless-stopped
+    volumes:
+      - ./logs:/fluentd/log
+      - ./config/fluentd/fluent.conf:/fluentd/etc/fluent.conf:ro
+    networks:
+      - chinese-naming-network
+    profiles:
+      - logging
+
+# 网络配置
+networks:
+  chinese-naming-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 数据卷配置
+volumes:
+  redis_data:
+    driver: local
+  app_cache:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# 开发环境配置
+---
+# docker-compose.dev.yml
+version: '3.8'
+
+services:
+  chinese-naming-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: chinese-naming-dev
+    restart: unless-stopped
+    ports:
+      - "${DEV_PORT:-3000}:3000"
+      - "${DEBUG_PORT:-9229}:9229"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DEBUG=chinese-naming:*
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - dev_logs:/app/logs
+    networks:
+      - chinese-naming-dev-network
+    command: npm run dev
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: chinese-naming-redis-dev
+    restart: unless-stopped
+    ports:
+      - "${REDIS_DEV_PORT:-6380}:6379"
+    networks:
+      - chinese-naming-dev-network
+
+networks:
+  chinese-naming-dev-network:
+    driver: bridge
+
+volumes:
+  dev_logs:
+    driver: local
+
+# 测试环境配置
+---
+# docker-compose.test.yml
+version: '3.8'
+
+services:
+  chinese-naming-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    container_name: chinese-naming-test
+    environment:
+      - NODE_ENV=test
+      - CI=true
+    volumes:
+      - ./coverage:/app/coverage
+      - ./test-results:/app/test-results
+    networks:
+      - chinese-naming-test-network
+    command: npm run test:ci
+
+networks:
+  chinese-naming-test-network:
+    driver: bridge

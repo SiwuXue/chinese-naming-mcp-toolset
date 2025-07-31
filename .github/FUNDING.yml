@@ -1,0 +1,16 @@
+# GitHub资助配置
+# 这些是支持的资助平台
+
+github: # 将被替换为实际的GitHub用户名
+# patreon: # 将被替换为Patreon用户名
+# open_collective: # 将被替换为Open Collective项目名
+# ko_fi: # 将被替换为Ko-fi用户名
+# tidelift: # 将被替换为Tidelift包名
+# community_bridge: # 将被替换为Community Bridge项目名
+# liberapay: # 将被替换为Liberapay用户名
+# issuehunt: # 将被替换为IssueHunt用户名
+# otechie: # 将被替换为Otechie用户名
+# lfx_crowdfunding: # 将被替换为LFX Crowdfunding项目名
+custom: # 自定义资助链接的数组，最多4个
+  - "https://chinese-naming.dev/sponsor"
+  - "https://paypal.me/chinesenaming"

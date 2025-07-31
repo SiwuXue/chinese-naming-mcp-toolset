@@ -1,0 +1,699 @@
+# 依赖项
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 覆盖率目录
+lib-cov
+
+# nyc测试覆盖率
+.nyc_output
+
+# Grunt中间存储
+.grunt
+
+# Bower依赖目录
+bower_components
+
+# node-waf配置
+.lock-wscript
+
+# 编译的二进制插件
+build/Release
+
+# 依赖目录
+node_modules/
+jspm_packages/
+
+# Snowpack依赖目录
+web_modules/
+
+# TypeScript缓存
+*.tsbuildinfo
+
+# 可选的npm缓存目录
+.npm
+
+# 可选的eslint缓存
+.eslintcache
+
+# 可选的stylelint缓存
+.stylelintcache
+
+# Microbundle缓存
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# 可选的REPL历史
+.node_repl_history
+
+# npm包的输出
+*.tgz
+
+# Yarn完整性文件
+.yarn-integrity
+
+# dotenv环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# parcel-bundler缓存
+.cache
+.parcel-cache
+
+# Next.js构建输出
+.next
+out
+
+# Nuxt.js构建/生成输出
+.nuxt
+dist
+
+# Gatsby文件
+.cache/
+public
+
+# Vuepress构建输出
+.vuepress/dist
+
+# Serverless目录
+.serverless/
+
+# FuseBox缓存
+.fusebox/
+
+# DynamoDB本地文件
+.dynamodb/
+
+# TernJS端口文件
+.tern-port
+
+# Stores VSCode版本用于远程容器
+.vscode-server
+
+# 日志文件
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 目录用于仪器化的库
+lib-cov
+
+# 覆盖率目录
+coverage
+*.lcov
+
+# nyc测试覆盖率
+.nyc_output
+
+# 构建输出
+build/
+dist/
+out/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+*.temp
+
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE和编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 项目特定的忽略
+
+# 配置文件（保留示例文件）
+/config/local.json
+/config/production.json
+/config/development.json
+/config/test.json
+
+# 数据文件
+/data/
+*.db
+*.sqlite
+*.sqlite3
+
+# 缓存目录
+.cache/
+cache/
+
+# 用户上传的文件
+uploads/
+
+# 生成的文档
+/docs/generated/
+/docs/api/
+
+# 测试输出
+/test-results/
+/test-output/
+junit.xml
+
+# 性能测试结果
+/benchmark-results/
+
+# 安全扫描结果
+/security-reports/
+
+# Docker相关
+.dockerignore
+
+# 部署相关
+/deploy/
+*.tar.gz
+*.zip
+
+# 监控和日志
+/monitoring/
+/logs/
+
+# 备份文件
+*.bak
+*.backup
+*.old
+
+# 锁文件（保留package-lock.json）
+yarn.lock
+pnpm-lock.yaml
+
+# 本地开发文件
+.local
+.dev
+
+# 实验性功能
+/experimental/
+
+# 第三方库（如果本地安装）
+/vendor/
+/lib/
+
+# 压缩文件
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# 编译输出
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# 包文件
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# 虚拟机崩溃日志
+hs_err_pid*
+
+# 项目特定的数据文件
+/src/data/characters.json
+/src/data/poems.json
+/src/data/names.json
+/src/data/statistics.json
+
+# 用户配置
+.user.json
+user-config.json
+
+# 本地测试数据
+/test/fixtures/local/
+
+# 性能分析文件
+*.cpuprofile
+*.heapprofile
+*.heapsnapshot
+
+# 调试文件
+*.map
+
+# 国际化编译文件
+/locales/compiled/
+
+# 自动生成的文件
+auto-generated/
+generated/
+
+# 工具输出
+tool-output/
+
+# 临时构建文件
+.build-tmp/
+
+# 本地配置覆盖
+local.config.js
+local.config.json
+
+# 开发者个人文件
+.personal/
+my-*/
+
+# 系统文件
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# 网络文件
+.netrwhist
+
+# 标签文件
+tags
+TAGS
+
+# 数据库文件
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 证书和密钥文件
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# 配置模板的实例
+config.local.*
+.env.local.*
+
+# 工具特定的缓存
+.tool-cache/
+.algorithm-cache/
+.name-cache/
+
+# 统计和分析数据
+stats/
+analytics/
+metrics/
+
+# 用户生成的内容
+user-content/
+user-data/
+
+# 第三方集成配置
+.integration-config/
+
+# 本地数据库
+local.db
+dev.db
+test.db
+
+# 临时导出文件
+exports/
+*.csv
+*.xlsx
+*.json.export
+
+# 调试和诊断文件
+debug/
+diagnostics/
+trace/
+
+# 本地脚本
+local-scripts/
+my-scripts/
+
+# IDE特定文件
+.project
+.classpath
+.settings/
+*.iml
+*.ipr
+*.iws
+
+# 编辑器备份
+*~
+.#*
+#*#
+
+# 版本控制系统文件
+.svn/
+.hg/
+.bzr/
+
+# 包管理器文件
+.pnp.*
+.yarn/
+
+# 运行时配置
+runtime.json
+runtime.config.js
+
+# 本地开发服务器
+.dev-server/
+
+# 错误报告
+error-reports/
+crash-reports/
+
+# 用户偏好设置
+preferences.json
+settings.local.json
+
+# 插件和扩展
+plugins/local/
+extensions/local/
+
+# 实验性代码
+experiments/
+prototypes/
+
+# 文档草稿
+drafts/
+*.draft.md
+
+# 本地化文件
+*.po~
+*.pot~
+
+# 搜索索引
+.search-index/
+
+# 缩略图
+.thumbnails/
+
+# 回收站
+.recycle/
+
+# 同步文件
+.sync/
+*.sync-conflict-*
+
+# 云存储
+.dropbox
+.dropbox.attr
+.onedrive
+.googledrive
+
+# 移动设备
+.android/
+.ios/
+
+# 游戏文件
+*.sav
+*.save
+
+# 媒体文件缓存
+.media-cache/
+
+# 字体缓存
+.font-cache/
+
+# 样式缓存
+.style-cache/
+
+# 脚本缓存
+.script-cache/
+
+# API缓存
+.api-cache/
+
+# 会话文件
+.sessions/
+sessions/
+
+# 队列文件
+.queue/
+queue/
+
+# 锁文件
+*.lock
+.lock
+
+# 进程文件
+.processes/
+
+# 套接字文件
+*.sock
+*.socket
+
+# 管道文件
+*.pipe
+*.fifo
+
+# 内存映射文件
+*.mmap
+
+# 共享内存
+*.shm
+
+# 信号量
+*.sem
+
+# 消息队列
+*.mq
+
+# 事件文件
+*.event
+
+# 状态文件
+*.state
+*.status
+
+# 历史文件
+*.history
+*.hist
+
+# 快照文件
+*.snapshot
+*.snap
+
+# 检查点文件
+*.checkpoint
+*.ckpt
+
+# 恢复文件
+*.recovery
+*.recover
+
+# 迁移文件
+*.migration
+*.migrate
+
+# 种子文件
+*.seed
+*.seeds
+
+# 固定文件
+*.fixture
+*.fixtures
+
+# 模拟文件
+*.mock
+*.mocks
+
+# 存根文件
+*.stub
+*.stubs
+
+# 假数据文件
+*.fake
+*.fakes
+
+# 示例数据文件
+*.sample
+*.samples
+
+# 演示文件
+*.demo
+*.demos
+
+# 教程文件
+*.tutorial
+*.tutorials
+
+# 指南文件
+*.guide
+*.guides
+
+# 手册文件
+*.manual
+*.manuals
+
+# 参考文件
+*.reference
+*.references
+
+# 规范文件
+*.spec.local
+*.specification.local
+
+# 协议文件
+*.protocol.local
+*.protocols.local
+
+# 架构文件
+*.schema.local
+*.schemas.local
+
+# 模型文件
+*.model.local
+*.models.local
+
+# 视图文件
+*.view.local
+*.views.local
+
+# 控制器文件
+*.controller.local
+*.controllers.local
+
+# 服务文件
+*.service.local
+*.services.local
+
+# 工具文件
+*.tool.local
+*.tools.local
+
+# 实用程序文件
+*.util.local
+*.utils.local
+*.utility.local
+*.utilities.local
+
+# 助手文件
+*.helper.local
+*.helpers.local
+
+# 中间件文件
+*.middleware.local
+*.middlewares.local
+
+# 插件文件
+*.plugin.local
+*.plugins.local
+
+# 扩展文件
+*.extension.local
+*.extensions.local
+
+# 模块文件
+*.module.local
+*.modules.local
+
+# 组件文件
+*.component.local
+*.components.local
+
+# 部件文件
+*.widget.local
+*.widgets.local
+
+# 片段文件
+*.fragment.local
+*.fragments.local
+
+# 模板文件
+*.template.local
+*.templates.local
+
+# 布局文件
+*.layout.local
+*.layouts.local
+
+# 主题文件
+*.theme.local
+*.themes.local
+
+# 皮肤文件
+*.skin.local
+*.skins.local
+
+# 样式文件
+*.style.local
+*.styles.local
+
+# 脚本文件
+*.script.local
+*.scripts.local
+
+# 配置文件
+*.config.local
+*.configs.local
+*.configuration.local
+*.configurations.local
+
+# 设置文件
+*.setting.local
+*.settings.local
+
+# 选项文件
+*.option.local
+*.options.local
+
+# 参数文件
+*.param.local
+*.params.local
+*.parameter.local
+*.parameters.local
+
+# 常量文件
+*.const.local
+*.consts.local
+*.constant.local
+*.constants.local
+
+# 变量文件
+*.var.local
+*.vars.local
+*.variable.local
+*.variables.local
+
+# 环境文件
+*.env.local
+*.envs.local
+*.environment.local
+*.environments.local

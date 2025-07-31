@@ -1,0 +1,560 @@
+name: Performance Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每周日凌晨 3 点运行性能测试
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      test_duration:
+        description: 'Test duration in seconds'
+        required: false
+        default: '60'
+        type: string
+      concurrent_users:
+        description: 'Number of concurrent users'
+        required: false
+        default: '10'
+        type: string
+
+env:
+  NODE_VERSION: '18'
+  TEST_DURATION: ${{ github.event.inputs.test_duration || '60' }}
+  CONCURRENT_USERS: ${{ github.event.inputs.concurrent_users || '10' }}
+
+jobs:
+  # 单元测试性能基准
+  unit-performance:
+    name: Unit Test Performance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run performance benchmarks
+        run: |
+          echo "🚀 Running performance benchmarks..."
+          npm run test:performance || npm run benchmark || echo "No performance tests available"
+
+      - name: Generate performance report
+        run: |
+          echo "# 📊 Unit Performance Report" > unit-performance.md
+          echo "" >> unit-performance.md
+          echo "**Test Date:** $(date)" >> unit-performance.md
+          echo "**Node.js Version:** ${{ env.NODE_VERSION }}" >> unit-performance.md
+          echo "**OS:** $(uname -a)" >> unit-performance.md
+          echo "" >> unit-performance.md
+          
+          if [ -f "benchmark-results.json" ]; then
+            echo "## 🎯 Benchmark Results" >> unit-performance.md
+            echo "" >> unit-performance.md
+            echo "\`\`\`json" >> unit-performance.md
+            cat benchmark-results.json >> unit-performance.md
+            echo "\`\`\`" >> unit-performance.md
+          fi
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-performance-results
+          path: |
+            unit-performance.md
+            benchmark-results.json
+        if: always()
+
+  # 负载测试
+  load-testing:
+    name: Load Testing
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      mongodb:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: password
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install load testing tools
+        run: |
+          npm install -g artillery@latest
+          npm install -g autocannon
+
+      - name: Start application
+        run: |
+          npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+          
+          # 等待应用启动
+          echo "⏳ Waiting for application to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:3000/health 2>/dev/null; then
+              echo "✅ Application is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Application not ready yet..."
+            sleep 2
+          done
+        env:
+          NODE_ENV: test
+          REDIS_URL: redis://localhost:6379
+          MONGODB_URL: mongodb://admin:password@localhost:27017/chinese-naming?authSource=admin
+
+      - name: Run Artillery load test
+        run: |
+          echo "🎯 Running Artillery load test..."
+          
+          cat > artillery-config.yml << EOF
+          config:
+            target: 'http://localhost:3000'
+            phases:
+              - duration: ${{ env.TEST_DURATION }}
+                arrivalRate: ${{ env.CONCURRENT_USERS }}
+            processor: './artillery-processor.js'
+          scenarios:
+            - name: 'Health Check'
+              weight: 20
+              flow:
+                - get:
+                    url: '/health'
+            - name: 'Generate Chinese Name'
+              weight: 40
+              flow:
+                - post:
+                    url: '/api/generate-name'
+                    json:
+                      gender: 'male'
+                      surname: '张'
+                      preferences:
+                        style: 'traditional'
+            - name: 'Analyze Name Meaning'
+              weight: 30
+              flow:
+                - post:
+                    url: '/api/analyze-meaning'
+                    json:
+                      name: '张伟明'
+            - name: 'Check Name Collision'
+              weight: 10
+              flow:
+                - post:
+                    url: '/api/check-collision'
+                    json:
+                      name: '张三'
+          EOF
+          
+          cat > artillery-processor.js << EOF
+          module.exports = {
+            setRandomData: function(requestParams, context, ee, next) {
+              const surnames = ['张', '王', '李', '赵', '陈', '刘', '杨', '黄'];
+              const genders = ['male', 'female'];
+              
+              context.vars.randomSurname = surnames[Math.floor(Math.random() * surnames.length)];
+              context.vars.randomGender = genders[Math.floor(Math.random() * genders.length)];
+              
+              return next();
+            }
+          };
+          EOF
+          
+          artillery run artillery-config.yml --output artillery-report.json
+        continue-on-error: true
+
+      - name: Run Autocannon stress test
+        run: |
+          echo "⚡ Running Autocannon stress test..."
+          
+          autocannon -c ${{ env.CONCURRENT_USERS }} -d ${{ env.TEST_DURATION }} \
+            -H "Content-Type: application/json" \
+            -m POST \
+            -b '{"gender":"male","surname":"张","preferences":{"style":"traditional"}}' \
+            http://localhost:3000/api/generate-name \
+            --json > autocannon-report.json || true
+        continue-on-error: true
+
+      - name: Stop application
+        run: |
+          if [ ! -z "$APP_PID" ]; then
+            kill $APP_PID || true
+          fi
+        if: always()
+
+      - name: Generate load test report
+        run: |
+          echo "# 🔥 Load Testing Report" > load-test-report.md
+          echo "" >> load-test-report.md
+          echo "**Test Date:** $(date)" >> load-test-report.md
+          echo "**Duration:** ${{ env.TEST_DURATION }} seconds" >> load-test-report.md
+          echo "**Concurrent Users:** ${{ env.CONCURRENT_USERS }}" >> load-test-report.md
+          echo "**Target:** http://localhost:3000" >> load-test-report.md
+          echo "" >> load-test-report.md
+          
+          if [ -f "artillery-report.json" ]; then
+            echo "## 🎯 Artillery Results" >> load-test-report.md
+            echo "" >> load-test-report.md
+            
+            # 提取关键指标
+            TOTAL_REQUESTS=$(jq '.aggregate.counters["http.requests"] // 0' artillery-report.json)
+            TOTAL_RESPONSES=$(jq '.aggregate.counters["http.responses"] // 0' artillery-report.json)
+            ERROR_RATE=$(jq '.aggregate.counters["http.response_time.min"] // 0' artillery-report.json)
+            AVG_RESPONSE_TIME=$(jq '.aggregate.summaries["http.response_time"].mean // 0' artillery-report.json)
+            P95_RESPONSE_TIME=$(jq '.aggregate.summaries["http.response_time"].p95 // 0' artillery-report.json)
+            P99_RESPONSE_TIME=$(jq '.aggregate.summaries["http.response_time"].p99 // 0' artillery-report.json)
+            
+            echo "- **Total Requests:** $TOTAL_REQUESTS" >> load-test-report.md
+            echo "- **Total Responses:** $TOTAL_RESPONSES" >> load-test-report.md
+            echo "- **Average Response Time:** ${AVG_RESPONSE_TIME}ms" >> load-test-report.md
+            echo "- **95th Percentile:** ${P95_RESPONSE_TIME}ms" >> load-test-report.md
+            echo "- **99th Percentile:** ${P99_RESPONSE_TIME}ms" >> load-test-report.md
+            echo "" >> load-test-report.md
+          fi
+          
+          if [ -f "autocannon-report.json" ]; then
+            echo "## ⚡ Autocannon Results" >> load-test-report.md
+            echo "" >> load-test-report.md
+            
+            REQUESTS_PER_SEC=$(jq '.requests.average // 0' autocannon-report.json)
+            LATENCY_AVG=$(jq '.latency.average // 0' autocannon-report.json)
+            LATENCY_P99=$(jq '.latency.p99 // 0' autocannon-report.json)
+            THROUGHPUT=$(jq '.throughput.average // 0' autocannon-report.json)
+            
+            echo "- **Requests/sec:** $REQUESTS_PER_SEC" >> load-test-report.md
+            echo "- **Average Latency:** ${LATENCY_AVG}ms" >> load-test-report.md
+            echo "- **99th Percentile Latency:** ${LATENCY_P99}ms" >> load-test-report.md
+            echo "- **Throughput:** ${THROUGHPUT} bytes/sec" >> load-test-report.md
+            echo "" >> load-test-report.md
+          fi
+        if: always()
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: load-test-results
+          path: |
+            load-test-report.md
+            artillery-report.json
+            autocannon-report.json
+            artillery-config.yml
+        if: always()
+
+  # 内存和CPU性能分析
+  profiling:
+    name: Performance Profiling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install profiling tools
+        run: |
+          npm install -g clinic
+          npm install -g 0x
+
+      - name: Run memory profiling
+        run: |
+          echo "🧠 Running memory profiling..."
+          
+          # 创建简单的性能测试脚本
+          cat > performance-test.js << EOF
+          const { ChineseNameGenerator } = require('./src/tools/chinese-name-generator');
+          const { NameMeaningAnalyzer } = require('./src/tools/name-meaning-analyzer');
+          
+          async function runPerformanceTest() {
+            const generator = new ChineseNameGenerator();
+            const analyzer = new NameMeaningAnalyzer();
+            
+            console.log('Starting performance test...');
+            const startTime = Date.now();
+            
+            // 生成1000个名字
+            for (let i = 0; i < 1000; i++) {
+              await generator.execute({
+                gender: i % 2 === 0 ? 'male' : 'female',
+                surname: '张',
+                preferences: { style: 'traditional' }
+              });
+              
+              if (i % 2 === 0) {
+                await analyzer.execute({ name: '张伟明' });
+              }
+              
+              if (i % 100 === 0) {
+                console.log(\`Progress: \${i}/1000\`);
+              }
+            }
+            
+            const endTime = Date.now();
+            console.log(\`Performance test completed in \${endTime - startTime}ms\`);
+            
+            // 输出内存使用情况
+            const memUsage = process.memoryUsage();
+            console.log('Memory Usage:', {
+              rss: \`\${Math.round(memUsage.rss / 1024 / 1024)}MB\`,
+              heapTotal: \`\${Math.round(memUsage.heapTotal / 1024 / 1024)}MB\`,
+              heapUsed: \`\${Math.round(memUsage.heapUsed / 1024 / 1024)}MB\`,
+              external: \`\${Math.round(memUsage.external / 1024 / 1024)}MB\`
+            });
+          }
+          
+          runPerformanceTest().catch(console.error);
+          EOF
+          
+          # 运行内存分析
+          clinic heapprofiler -- node performance-test.js || true
+        continue-on-error: true
+
+      - name: Run CPU profiling
+        run: |
+          echo "⚡ Running CPU profiling..."
+          
+          # 运行CPU分析
+          0x -- node performance-test.js || true
+        continue-on-error: true
+
+      - name: Generate profiling report
+        run: |
+          echo "# 🔬 Performance Profiling Report" > profiling-report.md
+          echo "" >> profiling-report.md
+          echo "**Test Date:** $(date)" >> profiling-report.md
+          echo "**Node.js Version:** ${{ env.NODE_VERSION }}" >> profiling-report.md
+          echo "**Test Scenario:** 1000 name generations + 500 meaning analyses" >> profiling-report.md
+          echo "" >> profiling-report.md
+          
+          echo "## 📊 System Information" >> profiling-report.md
+          echo "" >> profiling-report.md
+          echo "- **OS:** $(uname -a)" >> profiling-report.md
+          echo "- **CPU:** $(nproc) cores" >> profiling-report.md
+          echo "- **Memory:** $(free -h | awk '/^Mem:/ {print $2}')" >> profiling-report.md
+          echo "" >> profiling-report.md
+          
+          if [ -d ".clinic" ]; then
+            echo "## 🧠 Memory Analysis" >> profiling-report.md
+            echo "" >> profiling-report.md
+            echo "Clinic.js heap profiler results are available in the artifacts." >> profiling-report.md
+            echo "" >> profiling-report.md
+          fi
+          
+          if [ -f "profile-*.html" ]; then
+            echo "## ⚡ CPU Analysis" >> profiling-report.md
+            echo "" >> profiling-report.md
+            echo "0x flame graph results are available in the artifacts." >> profiling-report.md
+            echo "" >> profiling-report.md
+          fi
+        if: always()
+
+      - name: Upload profiling results
+        uses: actions/upload-artifact@v3
+        with:
+          name: profiling-results
+          path: |
+            profiling-report.md
+            .clinic/
+            profile-*.html
+            performance-test.js
+        if: always()
+
+  # 性能回归检测
+  regression-test:
+    name: Performance Regression Detection
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run current performance test
+        run: |
+          echo "📊 Running performance test on current branch..."
+          npm run test:performance > current-performance.txt 2>&1 || echo "No performance tests available"
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Install base dependencies
+        run: npm ci
+
+      - name: Run base performance test
+        run: |
+          echo "📊 Running performance test on base branch..."
+          npm run test:performance > base-performance.txt 2>&1 || echo "No performance tests available"
+
+      - name: Compare performance
+        run: |
+          echo "# 📈 Performance Regression Report" > regression-report.md
+          echo "" >> regression-report.md
+          echo "**PR:** #${{ github.event.number }}" >> regression-report.md
+          echo "**Base Branch:** ${{ github.base_ref }}" >> regression-report.md
+          echo "**Head Branch:** ${{ github.head_ref }}" >> regression-report.md
+          echo "**Test Date:** $(date)" >> regression-report.md
+          echo "" >> regression-report.md
+          
+          echo "## 🔍 Performance Comparison" >> regression-report.md
+          echo "" >> regression-report.md
+          
+          if [ -f "base-performance.txt" ] && [ -f "current-performance.txt" ]; then
+            echo "### Base Branch Performance" >> regression-report.md
+            echo "\`\`\`" >> regression-report.md
+            cat base-performance.txt >> regression-report.md
+            echo "\`\`\`" >> regression-report.md
+            echo "" >> regression-report.md
+            
+            echo "### Current Branch Performance" >> regression-report.md
+            echo "\`\`\`" >> regression-report.md
+            cat current-performance.txt >> regression-report.md
+            echo "\`\`\`" >> regression-report.md
+            echo "" >> regression-report.md
+          else
+            echo "⚠️ Performance test results not available for comparison." >> regression-report.md
+            echo "" >> regression-report.md
+          fi
+          
+          echo "## 💡 Recommendations" >> regression-report.md
+          echo "" >> regression-report.md
+          echo "- Review any significant performance changes" >> regression-report.md
+          echo "- Consider running load tests if major changes detected" >> regression-report.md
+          echo "- Monitor production metrics after deployment" >> regression-report.md
+
+      - name: Comment PR with regression report
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('regression-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+      - name: Upload regression results
+        uses: actions/upload-artifact@v3
+        with:
+          name: regression-test-results
+          path: |
+            regression-report.md
+            base-performance.txt
+            current-performance.txt
+        if: always()
+
+  # 性能报告汇总
+  performance-summary:
+    name: Performance Summary
+    runs-on: ubuntu-latest
+    needs: [unit-performance, load-testing, profiling]
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate comprehensive report
+        run: |
+          echo "# 🚀 Comprehensive Performance Report" > performance-summary.md
+          echo "" >> performance-summary.md
+          echo "**Test Date:** $(date)" >> performance-summary.md
+          echo "**Repository:** ${{ github.repository }}" >> performance-summary.md
+          echo "**Branch:** ${{ github.ref_name }}" >> performance-summary.md
+          echo "**Commit:** ${{ github.sha }}" >> performance-summary.md
+          echo "" >> performance-summary.md
+          
+          echo "## 📊 Test Results Summary" >> performance-summary.md
+          echo "" >> performance-summary.md
+          echo "- **Unit Performance:** ${{ needs.unit-performance.result }}" >> performance-summary.md
+          echo "- **Load Testing:** ${{ needs.load-testing.result }}" >> performance-summary.md
+          echo "- **Profiling:** ${{ needs.profiling.result }}" >> performance-summary.md
+          echo "" >> performance-summary.md
+          
+          echo "## 🔗 Detailed Reports" >> performance-summary.md
+          echo "" >> performance-summary.md
+          echo "All detailed performance reports are available in the workflow artifacts:" >> performance-summary.md
+          echo "" >> performance-summary.md
+          echo "- Unit Performance Results" >> performance-summary.md
+          echo "- Load Testing Results" >> performance-summary.md
+          echo "- Profiling Results" >> performance-summary.md
+          echo "" >> performance-summary.md
+          
+          echo "## 💡 Performance Insights" >> performance-summary.md
+          echo "" >> performance-summary.md
+          echo "### Key Metrics to Monitor" >> performance-summary.md
+          echo "- Response time percentiles (P95, P99)" >> performance-summary.md
+          echo "- Throughput (requests/second)" >> performance-summary.md
+          echo "- Memory usage patterns" >> performance-summary.md
+          echo "- CPU utilization" >> performance-summary.md
+          echo "- Error rates under load" >> performance-summary.md
+          echo "" >> performance-summary.md
+          
+          echo "### Optimization Opportunities" >> performance-summary.md
+          echo "- Implement caching strategies" >> performance-summary.md
+          echo "- Optimize database queries" >> performance-summary.md
+          echo "- Consider connection pooling" >> performance-summary.md
+          echo "- Review memory allocation patterns" >> performance-summary.md
+          echo "- Implement rate limiting" >> performance-summary.md
+
+      - name: Upload comprehensive report
+        uses: actions/upload-artifact@v3
+        with:
+          name: performance-summary
+          path: performance-summary.md

@@ -1,0 +1,365 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每天凌晨 2 点运行安全扫描
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # 依赖漏洞扫描
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: |
+          npm audit --audit-level=moderate --json > npm-audit.json || true
+          npm audit --audit-level=moderate
+
+      - name: Upload npm audit results
+        uses: actions/upload-artifact@v3
+        with:
+          name: npm-audit-results
+          path: npm-audit.json
+        if: always()
+
+  # Snyk 安全扫描
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' # 避免在定时任务中运行，节省配额
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=medium --json > snyk-results.json
+        continue-on-error: true
+
+      - name: Upload Snyk results
+        uses: actions/upload-artifact@v3
+        with:
+          name: snyk-results
+          path: snyk-results.json
+        if: always()
+
+      - name: Run Snyk to check Docker image
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: node:18-alpine
+          args: --severity-threshold=medium
+        continue-on-error: true
+
+  # CodeQL 代码分析
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript' ]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          queries: +security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{matrix.language}}"
+
+  # 密钥泄露扫描
+  secret-scan:
+    name: Secret Leak Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Run GitLeaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          config-path: .gitleaks.toml
+        continue-on-error: true
+
+  # 容器安全扫描
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t chinese-naming-security-test:latest .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'chinese-naming-security-test:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+        if: always()
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
+
+  # SAST 静态代码分析
+  sast-scan:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint security rules
+        run: |
+          npx eslint . --ext .js,.ts --format json --output-file eslint-security.json || true
+          npx eslint . --ext .js,.ts
+        continue-on-error: true
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+            p/javascript
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload ESLint results
+        uses: actions/upload-artifact@v3
+        with:
+          name: eslint-security-results
+          path: eslint-security.json
+        if: always()
+
+  # 许可证合规检查
+  license-scan:
+    name: License Compliance Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install license checker
+        run: npm install -g license-checker
+
+      - name: Check licenses
+        run: |
+          license-checker --json --out licenses.json
+          license-checker --summary
+
+      - name: Upload license results
+        uses: actions/upload-artifact@v3
+        with:
+          name: license-results
+          path: licenses.json
+
+  # 安全配置检查
+  security-config:
+    name: Security Configuration Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for security best practices
+        run: |
+          echo "🔍 Checking security configurations..."
+          
+          # 检查是否有 .env 文件被提交
+          if [ -f ".env" ]; then
+            echo "❌ .env file found in repository!"
+            exit 1
+          fi
+          
+          # 检查是否有敏感文件
+          SENSITIVE_FILES=("id_rsa" "id_dsa" "*.pem" "*.key" "*.p12" "*.pfx")
+          for pattern in "${SENSITIVE_FILES[@]}"; do
+            if find . -name "$pattern" -type f | grep -q .; then
+              echo "❌ Sensitive file pattern found: $pattern"
+              exit 1
+            fi
+          done
+          
+          # 检查 package.json 中的安全配置
+          if [ -f "package.json" ]; then
+            if ! grep -q '"private"' package.json; then
+              echo "⚠️  Consider setting 'private: true' in package.json"
+            fi
+          fi
+          
+          # 检查 Docker 安全配置
+          if [ -f "Dockerfile" ]; then
+            if grep -q "USER root" Dockerfile; then
+              echo "⚠️  Running as root user in Docker is not recommended"
+            fi
+            if ! grep -q "USER" Dockerfile; then
+              echo "⚠️  No USER directive found in Dockerfile"
+            fi
+          fi
+          
+          echo "✅ Security configuration check completed"
+
+  # 生成安全报告
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, codeql, secret-scan, container-scan, sast-scan, license-scan]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate security summary
+        run: |
+          echo "# 🔒 Security Scan Summary" > security-summary.md
+          echo "" >> security-summary.md
+          echo "**Scan Date:** $(date)" >> security-summary.md
+          echo "**Repository:** ${{ github.repository }}" >> security-summary.md
+          echo "**Branch:** ${{ github.ref_name }}" >> security-summary.md
+          echo "**Commit:** ${{ github.sha }}" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          echo "## 📊 Scan Results" >> security-summary.md
+          echo "" >> security-summary.md
+          
+          # 检查各个扫描结果
+          if [ -f "npm-audit-results/npm-audit.json" ]; then
+            VULNERABILITIES=$(jq '.metadata.vulnerabilities | to_entries | map(select(.value > 0)) | length' npm-audit-results/npm-audit.json 2>/dev/null || echo "0")
+            echo "- **NPM Audit:** $VULNERABILITIES vulnerability types found" >> security-summary.md
+          fi
+          
+          if [ -f "snyk-results/snyk-results.json" ]; then
+            echo "- **Snyk Scan:** Completed" >> security-summary.md
+          fi
+          
+          echo "- **CodeQL Analysis:** ${{ needs.codeql.result }}" >> security-summary.md
+          echo "- **Secret Scan:** ${{ needs.secret-scan.result }}" >> security-summary.md
+          echo "- **Container Scan:** ${{ needs.container-scan.result }}" >> security-summary.md
+          echo "- **SAST Scan:** ${{ needs.sast-scan.result }}" >> security-summary.md
+          echo "- **License Scan:** ${{ needs.license-scan.result }}" >> security-summary.md
+          
+          echo "" >> security-summary.md
+          echo "## 🔗 Detailed Reports" >> security-summary.md
+          echo "" >> security-summary.md
+          echo "Detailed scan results are available in the workflow artifacts." >> security-summary.md
+
+      - name: Upload security summary
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-summary
+          path: security-summary.md
+
+      - name: Comment PR with security summary
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('security-summary.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

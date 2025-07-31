@@ -1,0 +1,428 @@
+{
+  "name": "chinese-naming-mcp-toolset",
+  "version": "1.0.0",
+  "description": "中文起名MCP工具集配置文件",
+  
+  "database": {
+    "characterData": {
+      "path": "./src/data/character-data.js",
+      "cacheEnabled": true,
+      "cacheTimeout": 3600000,
+      "updateInterval": 86400000
+    },
+    "surnames": {
+      "commonThreshold": 1000,
+      "rareThreshold": 10,
+      "maxResults": 100
+    },
+    "characters": {
+      "minStrokes": 1,
+      "maxStrokes": 30,
+      "maxResults": 500
+    }
+  },
+  
+  "tools": {
+    "chinese-name-generator": {
+      "enabled": true,
+      "maxGenerationCount": 20,
+      "defaultCount": 3,
+      "timeout": 30000,
+      "scoring": {
+        "meaningWeight": 0.3,
+        "pronunciationWeight": 0.2,
+        "wuxingWeight": 0.2,
+        "strokeWeight": 0.15,
+        "culturalWeight": 0.15
+      },
+      "filters": {
+        "avoidCommonNames": true,
+        "avoidNegativeMeaning": true,
+        "preferBalancedWuxing": true
+      }
+    },
+    
+    "name-meaning-analyzer": {
+      "enabled": true,
+      "timeout": 25000,
+      "depths": {
+        "basic": {
+          "includeCharacterMeaning": true,
+          "includeOverallMeaning": true,
+          "includeScore": true
+        },
+        "detailed": {
+          "includeCharacterMeaning": true,
+          "includeOverallMeaning": true,
+          "includeScore": true,
+          "includeWuxing": true,
+          "includePronunciation": true,
+          "includeCulturalContext": true
+        },
+        "comprehensive": {
+          "includeCharacterMeaning": true,
+          "includeOverallMeaning": true,
+          "includeScore": true,
+          "includeWuxing": true,
+          "includePronunciation": true,
+          "includeCulturalContext": true,
+          "includeHistoricalContext": true,
+          "includeModernInterpretation": true,
+          "includePoetryReferences": true
+        }
+      }
+    },
+    
+    "name-collision-checker": {
+      "enabled": true,
+      "timeout": 20000,
+      "regions": {
+        "national": {
+          "populationBase": 1400000000,
+          "sampleSize": 10000000
+        },
+        "provincial": {
+          "populationBase": 100000000,
+          "sampleSize": 1000000
+        },
+        "city": {
+          "populationBase": 10000000,
+          "sampleSize": 100000
+        }
+      },
+      "similarity": {
+        "threshold": 0.7,
+        "maxResults": 10,
+        "includePhonetic": true,
+        "includeVisual": true
+      },
+      "riskLevels": {
+        "very_low": { "min": 0, "max": 0.001 },
+        "low": { "min": 0.001, "max": 0.01 },
+        "medium": { "min": 0.01, "max": 0.1 },
+        "high": { "min": 0.1, "max": 0.5 },
+        "very_high": { "min": 0.5, "max": 1.0 }
+      }
+    },
+    
+    "name-bazi-analyzer": {
+      "enabled": true,
+      "timeout": 35000,
+      "wuxing": {
+        "elements": ["金", "木", "水", "火", "土"],
+        "relationships": {
+          "generate": {
+            "金": "水",
+            "水": "木",
+            "木": "火",
+            "火": "土",
+            "土": "金"
+          },
+          "overcome": {
+            "金": "木",
+            "木": "土",
+            "土": "水",
+            "水": "火",
+            "火": "金"
+          }
+        },
+        "strength": {
+          "very_weak": { "min": 0, "max": 0.2 },
+          "weak": { "min": 0.2, "max": 0.4 },
+          "normal": { "min": 0.4, "max": 0.6 },
+          "strong": { "min": 0.6, "max": 0.8 },
+          "very_strong": { "min": 0.8, "max": 1.0 }
+        }
+      },
+      "tenGods": {
+        "enabled": true,
+        "types": [
+          "比肩", "劫财", "食神", "伤官", "偏财",
+          "正财", "七杀", "正官", "偏印", "正印"
+        ]
+      },
+      "seasons": {
+        "spring": { "months": [2, 3, 4], "element": "木" },
+        "summer": { "months": [5, 6, 7], "element": "火" },
+        "autumn": { "months": [8, 9, 10], "element": "金" },
+        "winter": { "months": [11, 12, 1], "element": "水" }
+      }
+    },
+    
+    "name-phonetic-analyzer": {
+      "enabled": true,
+      "timeout": 15000,
+      "tones": {
+        "patterns": {
+          "rising": [1, 2, 3, 4],
+          "falling": [4, 3, 2, 1],
+          "balanced": [2, 3, 2, 3]
+        },
+        "harmony": {
+          "excellent": 0.9,
+          "good": 0.7,
+          "average": 0.5,
+          "poor": 0.3
+        }
+      },
+      "rhythm": {
+        "syllablePatterns": {
+          "preferred": ["平仄平", "仄平仄", "平平仄"],
+          "avoided": ["平平平", "仄仄仄"]
+        }
+      }
+    },
+    
+    "name-cultural-analyzer": {
+      "enabled": true,
+      "timeout": 25000,
+      "culturalLayers": {
+        "classical": {
+          "sources": ["诗经", "楚辞", "论语", "孟子", "老子", "庄子"],
+          "weight": 0.4
+        },
+        "historical": {
+          "sources": ["史记", "汉书", "三国志", "资治通鉴"],
+          "weight": 0.3
+        },
+        "literary": {
+          "sources": ["唐诗", "宋词", "元曲", "明清小说"],
+          "weight": 0.3
+        }
+      },
+      "modernContext": {
+        "career": {
+          "fields": ["科技", "艺术", "商业", "教育", "医疗", "法律"],
+          "weight": 0.5
+        },
+        "personality": {
+          "traits": ["智慧", "勇敢", "仁慈", "诚信", "创新", "坚韧"],
+          "weight": 0.5
+        }
+      }
+    },
+    
+    "name-poetry-generator": {
+      "enabled": true,
+      "timeout": 30000,
+      "styles": {
+        "classical": {
+          "forms": ["五言绝句", "七言绝句", "五言律诗", "七言律诗"],
+          "themes": ["自然", "品德", "志向", "情感"]
+        },
+        "modern": {
+          "forms": ["自由诗", "散文诗", "现代格律诗"],
+          "themes": ["梦想", "成长", "友谊", "家庭"]
+        }
+      },
+      "imagery": {
+        "nature": ["山", "水", "花", "月", "云", "风"],
+        "virtue": ["德", "仁", "义", "礼", "智", "信"],
+        "aspiration": ["志", "梦", "翔", "腾", "达", "成"]
+      }
+    },
+    
+    "name-fortune-analyzer": {
+      "enabled": true,
+      "timeout": 20000,
+      "aspects": {
+        "career": {
+          "factors": ["五行配合", "字义寓意", "音韵和谐", "文化内涵"],
+          "weight": 0.3
+        },
+        "health": {
+          "factors": ["五行平衡", "字形结构", "笔画吉凶"],
+          "weight": 0.25
+        },
+        "relationships": {
+          "factors": ["音韵美感", "字义和谐", "文化共鸣"],
+          "weight": 0.25
+        },
+        "wealth": {
+          "factors": ["数理吉凶", "五行生克", "寓意财运"],
+          "weight": 0.2
+        }
+      },
+      "timeframes": {
+        "childhood": { "years": [0, 12] },
+        "youth": { "years": [13, 25] },
+        "adulthood": { "years": [26, 45] },
+        "middle_age": { "years": [46, 65] },
+        "elderly": { "years": [66, 100] }
+      }
+    },
+    
+    "name-fengshui-analyzer": {
+      "enabled": true,
+      "timeout": 25000,
+      "directions": {
+        "north": { "element": "水", "color": "黑", "number": 1 },
+        "northeast": { "element": "土", "color": "黄", "number": 8 },
+        "east": { "element": "木", "color": "绿", "number": 3 },
+        "southeast": { "element": "木", "color": "绿", "number": 4 },
+        "south": { "element": "火", "color": "红", "number": 9 },
+        "southwest": { "element": "土", "color": "黄", "number": 2 },
+        "west": { "element": "金", "color": "白", "number": 7 },
+        "northwest": { "element": "金", "color": "白", "number": 6 }
+      },
+      "numbers": {
+        "lucky": [1, 3, 6, 8, 9],
+        "unlucky": [4, 7],
+        "neutral": [2, 5]
+      },
+      "colors": {
+        "elements": {
+          "金": ["白", "银", "金"],
+          "木": ["绿", "青", "蓝"],
+          "水": ["黑", "蓝", "灰"],
+          "火": ["红", "橙", "紫"],
+          "土": ["黄", "棕", "橙"]
+        }
+      }
+    },
+    
+    "name-history-analyzer": {
+      "enabled": true,
+      "timeout": 30000,
+      "periods": {
+        "ancient": {
+          "range": "先秦-汉",
+          "characteristics": ["单字名居多", "寓意质朴", "等级分明"]
+        },
+        "medieval": {
+          "range": "魏晋-唐宋",
+          "characteristics": ["双字名兴起", "文化繁荣", "诗词影响"]
+        },
+        "imperial": {
+          "range": "元明清",
+          "characteristics": ["字辈制度", "避讳严格", "寓意吉祥"]
+        },
+        "modern": {
+          "range": "民国-现代",
+          "characteristics": ["西化影响", "个性追求", "多元文化"]
+        }
+      },
+      "famousNames": {
+        "enabled": true,
+        "categories": ["帝王", "文人", "武将", "思想家", "艺术家"],
+        "maxResults": 5
+      },
+      "trends": {
+        "enabled": true,
+        "timespan": 100,
+        "factors": ["社会背景", "文化思潮", "政治环境", "经济发展"]
+      }
+    }
+  },
+  
+  "performance": {
+    "caching": {
+      "enabled": true,
+      "maxSize": 1000,
+      "ttl": 3600000,
+      "strategy": "lru"
+    },
+    "concurrency": {
+      "maxConcurrent": 10,
+      "queueSize": 100,
+      "timeout": 60000
+    },
+    "optimization": {
+      "enableParallelProcessing": true,
+      "enableResultCaching": true,
+      "enableDataPreloading": true
+    }
+  },
+  
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "outputs": {
+      "console": {
+        "enabled": true,
+        "level": "info"
+      },
+      "file": {
+        "enabled": false,
+        "level": "debug",
+        "path": "./logs/chinese-naming.log",
+        "maxSize": "10MB",
+        "maxFiles": 5
+      }
+    },
+    "categories": {
+      "tool-execution": "info",
+      "data-access": "debug",
+      "performance": "warn",
+      "error": "error"
+    }
+  },
+  
+  "validation": {
+    "strictMode": false,
+    "parameterValidation": {
+      "enabled": true,
+      "throwOnError": false,
+      "sanitizeInput": true
+    },
+    "outputValidation": {
+      "enabled": true,
+      "validateSchema": true,
+      "validateData": false
+    }
+  },
+  
+  "localization": {
+    "defaultLanguage": "zh-CN",
+    "supportedLanguages": ["zh-CN", "zh-TW", "en-US"],
+    "characterSets": {
+      "simplified": true,
+      "traditional": true
+    },
+    "dateFormats": {
+      "zh-CN": "YYYY年MM月DD日",
+      "zh-TW": "YYYY年MM月DD日",
+      "en-US": "MM/DD/YYYY"
+    }
+  },
+  
+  "security": {
+    "inputSanitization": {
+      "enabled": true,
+      "maxInputLength": 1000,
+      "allowedCharacters": "[\\u4e00-\\u9fff\\u3400-\\u4dbf\\w\\s\\-_.,!?()\[\]{}]"
+    },
+    "rateLimiting": {
+      "enabled": false,
+      "maxRequestsPerMinute": 60,
+      "maxRequestsPerHour": 1000
+    },
+    "dataProtection": {
+      "anonymizePersonalData": false,
+      "encryptSensitiveData": false
+    }
+  },
+  
+  "experimental": {
+    "features": {
+      "aiEnhancedGeneration": false,
+      "realTimeCollisionCheck": false,
+      "advancedPhoneticAnalysis": false,
+      "machineLearningScoring": false
+    },
+    "beta": {
+      "enabled": false,
+      "features": []
+    }
+  },
+  
+  "metadata": {
+    "author": "Chinese Naming MCP Toolset Team",
+    "license": "MIT",
+    "repository": "https://github.com/your-org/chinese-naming-mcp-toolset",
+    "documentation": "https://docs.chinese-naming-mcp.com",
+    "support": "support@chinese-naming-mcp.com",
+    "lastUpdated": "2024-01-01T00:00:00.000Z",
+    "configVersion": "1.0.0"
+  }
+}
