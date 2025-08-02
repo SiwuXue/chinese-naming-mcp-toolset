@@ -1,10 +1,10 @@
 {
   "name": "chinese-naming-mcp",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "A comprehensive MCP toolset for Chinese name generation, analysis, and cultural interpretation",
   "main": "index.js",
   "bin": {
-    "chinese-naming-mcp": "./bin/cli.js"
+    "chinese-naming-mcp": "./index.js"
   },
   "scripts": {
     "start": "node index.js",
@@ -71,7 +71,6 @@
   "files": [
     "index.js",
     "src/",
-    "bin/",
     "config/",
     "examples/",
     "README.md",
