@@ -76,8 +76,6 @@
     "README.md",
     "LICENSE"
   ],
-
-
   "config": {
     "logLevel": "info",
     "outputFormat": "json",
