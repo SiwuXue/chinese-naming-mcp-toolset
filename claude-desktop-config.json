@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "chinese-naming": {
+      "command": "npx",
+      "args": ["chinese-naming-mcp"]
+    }
+  }
+}

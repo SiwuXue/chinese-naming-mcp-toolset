@@ -50,7 +50,7 @@ npm start
   "mcpServers": {
     "chinese-naming": {
       "command": "npx",
-      "args": [""]
+      "args": ["chinese-naming-mcp"]
     }
   }
 }
@@ -71,6 +71,25 @@ npm start
 - 🔮 **name-fortune-analyzer** - 姓名运势分析器
 - 🏔️ **name-fengshui-analyzer** - 姓名风水分析器
 - 📚 **name-history-analyzer** - 姓名历史分析器
+
+## 🔧 故障排除
+
+如果遇到 "MCP error -32000: Connection closed" 错误，请参考 [故障排除指南](./MCP-TROUBLESHOOTING.md)。
+
+### 快速诊断
+
+运行测试脚本验证 MCP 服务器状态：
+
+```bash
+node test-mcp-connection.js
+```
+
+### 常见解决方案
+
+1. **检查配置文件**：确保 `claude_desktop_config.json` 格式正确
+2. **重启 Claude Desktop**：修改配置后必须完全重启
+3. **验证环境**：确保 Node.js >= 14.0.0 和 npm 正常工作
+4. **检查权限**：确保有足够的文件系统权限
 
 ### 基本使用
 
