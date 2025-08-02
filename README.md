@@ -56,11 +56,7 @@ npm start
   "mcpServers": {
     "chinese-naming": {
       "command": "node",
-      "args": ["./index.js"],
-      "env": {
-        "NODE_ENV": "production",
-        "MCP_MODE": "true"
-      }
+      "args": ["./index.js"]
     }
   }
 }
@@ -68,7 +64,7 @@ npm start
 
 
 
-#### 其他MCP客户端配置
+#### 服务配置 (Server Config)
 
 对于其他支持MCP协议的客户端，使用以下stdio配置：
 
@@ -76,8 +72,7 @@ npm start
 {
   "name": "chinese-naming",
   "command": "node",
-  "args": ["index.js"],
-  "cwd": "/path/to/chinese-naming-mcp-toolset"
+  "args": ["index.js"]
 }
 ```
 
