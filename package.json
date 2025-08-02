@@ -1,6 +1,6 @@
 {
   "name": "chinese-naming-mcp",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A comprehensive MCP toolset for Chinese name generation, analysis, and cultural interpretation",
   "main": "index.js",
   "bin": {

@@ -494,19 +494,19 @@ async function startMCPServer() {
   });
 }
 
-// 检查是否通过MCP协议启动
-const isMCPMode = process.argv.includes('--mcp') ||
-                  process.env.MCP_MODE === 'true' ||
-                  (!process.stdout.isTTY && process.argv.length === 2);
+// 检查是否使用命令行模式（有参数时）
+const isCommandLineMode = process.argv.length > 2 && 
+                         !process.argv.includes('--mcp') &&
+                         process.env.MCP_MODE !== 'true';
 
 // 如果直接运行此文件
 if (require.main === module) {
-  if (isMCPMode) {
-    // MCP模式：启动stdio服务器
-    startMCPServer().catch(console.error);
-  } else {
+  if (isCommandLineMode) {
     // 命令行模式：执行主函数
     main().catch(console.error);
+  } else {
+    // 默认MCP模式：启动stdio服务器
+    startMCPServer().catch(console.error);
   }
 }
 
