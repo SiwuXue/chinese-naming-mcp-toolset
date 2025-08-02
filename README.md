@@ -1,12 +1,6 @@
 # 中文起名MCP工具集
 
-[![CI/CD Pipeline](https://github.com/chinese-naming/mcp-toolset/actions/workflows/ci.yml/badge.svg)](https://github.com/chinese-naming/mcp-toolset/actions/workflows/ci.yml)
-[![npm version](https://badge.fury.io/js/chinese-naming-mcp-toolset.svg)](https://badge.fury.io/js/chinese-naming-mcp-toolset)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![codecov](https://codecov.io/gh/chinese-naming/mcp-toolset/branch/main/graph/badge.svg)](https://codecov.io/gh/chinese-naming/mcp-toolset)
-[![Docker Pulls](https://img.shields.io/docker/pulls/chinese-naming/mcp-toolset)](https://hub.docker.com/r/chinese-naming/mcp-toolset)
-
-> 🎯 **专业的中文起名工具集** - 基于传统文化与现代技术的智能姓名分析与生成系统
+ 🎯 **专业的中文起名工具集** - 基于传统文化与现代技术的智能姓名分析与生成系统
 
 ## 🌟 特性
 
@@ -30,7 +24,7 @@
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-org/chinese-naming-mcp-toolset.git
+git clone https://github.com/SiwuXue/chinese-naming-mcp-toolset.git
 cd chinese-naming-mcp-toolset
 
 # 安装依赖
@@ -55,26 +49,13 @@ npm start
 {
   "mcpServers": {
     "chinese-naming": {
-      "command": "node",
-      "args": ["./index.js"]
+      "command": "npx",
+      "args": [""]
     }
   }
 }
 ```
 
-
-
-#### 服务配置 (Server Config)
-
-对于其他支持MCP协议的客户端，使用以下stdio配置：
-
-```json
-{
-  "name": "chinese-naming",
-  "command": "node",
-  "args": ["index.js"]
-}
-```
 
 #### 验证连接
 
